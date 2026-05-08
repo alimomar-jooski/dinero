@@ -1,6 +1,10 @@
 // ===== CONSTANTS =====
-const STORAGE_KEY = 'dinero_v1'
 const CLAUDE_API = 'https://api.anthropic.com/v1/messages'
+const SUPABASE_URL = 'https://sojoixiecjuvdsecrvaz.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvam9peGllY2p1dmRzZWNydmF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTE1MzgsImV4cCI6MjA5MzgyNzUzOH0.drcAaMTYr8NNMJBFX6lEAe2ciZuqp8QuIWLBwZesM-s'
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+let currentUser = null
+let saveTimer = null
 
 const EXPENSE_CATS = [
   { id: 'housing',     name: 'Жильё + комуслуги',  icon: 'home',         color: '#6366f1' },
@@ -89,13 +93,25 @@ let state = {
 }
 
 // ===== STORAGE =====
-function loadData() {
+async function loadUserData() {
   try {
-    const d = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData()
+    const { data } = await _supabase
+      .from('user_data')
+      .select('data')
+      .eq('id', currentUser.id)
+      .maybeSingle()
+
+    if (!data) {
+      const defaults = defaultData()
+      await _supabase.from('user_data').insert({ id: currentUser.id, data: defaults })
+      return defaults
+    }
+
+    const d = data.data
     if (!d.goals) d.goals = []
+    if (!d.settings) d.settings = { claudeApiKey: '', currency: '₸', catNames: {}, customCats: { expense: [], income: [] } }
     if (!d.settings.catNames) d.settings.catNames = {}
     if (!d.settings.customCats) d.settings.customCats = { expense: [], income: [] }
-    // Migrate goals: add monthlyPlans, add ids to existing contributions
     d.goals.forEach(g => {
       if (!g.monthlyPlans) g.monthlyPlans = []
       if (!g.contributions) g.contributions = []
@@ -106,7 +122,13 @@ function loadData() {
 }
 
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    if (!currentUser) return
+    await _supabase.from('user_data').upsert({
+      id: currentUser.id, data: db, updated_at: new Date().toISOString()
+    })
+  }, 800)
 }
 
 function defaultData() {
@@ -116,7 +138,7 @@ function defaultData() {
   }
 }
 
-let db = loadData()
+let db = defaultData()
 
 function getMonthData(key) {
   if (!db.months[key]) db.months[key] = defaultMonth()
@@ -1277,6 +1299,52 @@ function saveWish() {
   renderWishlist()
 }
 
+// ===== AUTH =====
+async function signIn() {
+  const email = el('login-email').value.trim()
+  const password = el('login-password').value
+  if (!email || !password) return
+  const btn = el('login-btn')
+  btn.disabled = true
+  btn.textContent = 'Входим...'
+  el('login-error').style.display = 'none'
+  const { error } = await _supabase.auth.signInWithPassword({ email, password })
+  if (error) {
+    el('login-error').textContent = 'Неверный email или пароль'
+    el('login-error').style.display = 'block'
+    btn.disabled = false
+    btn.textContent = 'Войти'
+  }
+}
+
+async function signOut() {
+  await _supabase.auth.signOut()
+}
+
+function showApp() {
+  el('loading-screen').style.display = 'none'
+  el('login-screen').style.display = 'none'
+  document.querySelector('.app-header').style.removeProperty('display')
+  document.querySelector('.main-content').style.removeProperty('display')
+  document.querySelector('.bottom-nav').style.removeProperty('display')
+  el('fab').style.removeProperty('display')
+  const nickname = currentUser?.user_metadata?.nickname || currentUser?.email?.split('@')[0] || ''
+  el('header-nickname').textContent = nickname
+  state.viewMonthKey = currentMonthKey()
+  state.analyticsMonthKey = currentMonthKey()
+  updateMonthDisplay()
+  switchTab('home')
+}
+
+function showLogin() {
+  el('loading-screen').style.display = 'none'
+  el('login-screen').style.display = 'flex'
+  document.querySelector('.app-header').style.display = 'none'
+  document.querySelector('.main-content').style.display = 'none'
+  document.querySelector('.bottom-nav').style.display = 'none'
+  el('fab').style.display = 'none'
+}
+
 // ===== SETTINGS =====
 function openSettings() {
   renderSettings()
@@ -1284,11 +1352,32 @@ function openSettings() {
 }
 
 function renderSettings() {
+  el('settings-nickname').value = currentUser?.user_metadata?.nickname || ''
+  el('settings-new-password').value = ''
   el('settings-api-key').value = db.settings.claudeApiKey || ''
   el('settings-currency').value = db.settings.currency || '₸'
 }
 
-function saveSettings() {
+async function saveSettings() {
+  const nickname = el('settings-nickname').value.trim()
+  const newPassword = el('settings-new-password').value
+
+  if (newPassword && newPassword.length < 6) {
+    alert('Пароль должен быть не менее 6 символов'); return
+  }
+
+  const updates = {}
+  if (nickname) updates.data = { nickname }
+  if (newPassword) updates.password = newPassword
+
+  if (Object.keys(updates).length > 0) {
+    const { data, error } = await _supabase.auth.updateUser(updates)
+    if (!error && data.user) {
+      currentUser = data.user
+      el('header-nickname').textContent = data.user.user_metadata?.nickname || data.user.email?.split('@')[0] || ''
+    }
+  }
+
   db.settings.claudeApiKey = el('settings-api-key').value.trim()
   db.settings.currency = el('settings-currency').value.trim() || '₸'
   saveData()
@@ -1343,17 +1432,38 @@ function fabAction() {
 }
 
 // ===== INIT =====
-function init() {
-  state.viewMonthKey = currentMonthKey()
-  state.analyticsMonthKey = currentMonthKey()
-  updateMonthDisplay()
+async function init() {
+  document.querySelector('.app-header').style.display = 'none'
+  document.querySelector('.main-content').style.display = 'none'
+  document.querySelector('.bottom-nav').style.display = 'none'
+  el('fab').style.display = 'none'
 
-  // Register service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {})
   }
 
-  switchTab('home')
+  const { data: { session } } = await _supabase.auth.getSession()
+  if (session) {
+    currentUser = session.user
+    db = await loadUserData()
+    showApp()
+  } else {
+    showLogin()
+  }
+
+  _supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user
+      db = await loadUserData()
+      showApp()
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null
+      db = defaultData()
+      state.openSubcats = new Set()
+      state.expandedGoals = new Set()
+      showLogin()
+    }
+  })
 }
 
 document.addEventListener('DOMContentLoaded', init)
