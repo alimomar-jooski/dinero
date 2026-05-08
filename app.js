@@ -245,7 +245,7 @@ function renderBudget() {
     const diffTotal = actualTotal - planTotal
 
     setHTML('budget-content', `
-      <div class="budget-row budget-row-header">
+      <div class="budget-row-header">
         <div>Категория</div><div style="text-align:right">План</div>
         <div style="text-align:right">Факт</div><div style="text-align:right">Разница</div>
       </div>
@@ -283,7 +283,7 @@ function renderBudget() {
     const diffTotal = planTotal - actualTotal
 
     setHTML('budget-content', `
-      <div class="budget-row budget-row-header">
+      <div class="budget-row-header">
         <div>Категория</div><div style="text-align:right">План</div>
         <div style="text-align:right">Факт</div><div style="text-align:right">Остаток</div>
       </div>

@@ -386,10 +386,10 @@ body {
 
 .budget-row {
   display: grid;
-  grid-template-columns: 1fr 80px 80px 64px;
+  grid-template-columns: 1fr 60px 60px 50px;
   align-items: center;
-  padding: 12px 18px;
-  gap: 8px;
+  padding: 11px 14px;
+  gap: 4px;
   border-bottom: 1px solid var(--border);
   transition: background .12s;
 }
@@ -397,13 +397,16 @@ body {
 .budget-row:active { background: var(--card-hover); }
 
 .budget-row-header {
+  display: grid;
+  grid-template-columns: 1fr 60px 60px 50px;
+  gap: 4px;
   font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: .6px;
   background: var(--surface);
-  padding: 8px 18px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -442,10 +445,10 @@ body {
 
 .budget-totals-row {
   display: grid;
-  grid-template-columns: 1fr 80px 80px 64px;
+  grid-template-columns: 1fr 60px 60px 50px;
   align-items: center;
-  padding: 13px 18px;
-  gap: 8px;
+  padding: 12px 14px;
+  gap: 4px;
   background: var(--surface);
   font-weight: 700;
   font-size: 12px;
