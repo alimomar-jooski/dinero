@@ -3,25 +3,63 @@ const STORAGE_KEY = 'dinero_v1'
 const CLAUDE_API = 'https://api.anthropic.com/v1/messages'
 
 const EXPENSE_CATS = [
-  { id: 'housing',     name: 'Жильё + комуслуги',  icon: '🏠', color: '#6366f1' },
-  { id: 'kaspi',       name: 'Каспи',               icon: '💳', color: '#f59e0b' },
-  { id: 'otbasy',      name: 'Отбасы банк',         icon: '🏛️', color: '#3b82f6' },
-  { id: 'installment', name: 'Рассрочка',            icon: '📋', color: '#8b5cf6' },
-  { id: 'credit',      name: 'Кредит',               icon: '🏦', color: '#ef4444' },
-  { id: 'workout',     name: 'Тренировка',           icon: '💪', color: '#10b981' },
-  { id: 'phone',       name: 'Тариф (телефон)',      icon: '📱', color: '#06b6d4' },
-  { id: 'transport',   name: 'Транспорт',            icon: '🚗', color: '#f97316' },
-  { id: 'food',        name: 'Еда',                  icon: '🍔', color: '#84cc16' },
-  { id: 'other_exp',   name: 'Прочее',               icon: '📦', color: '#6b7280' },
+  { id: 'housing',     name: 'Жильё + комуслуги',  icon: 'home',         color: '#6366f1' },
+  { id: 'kaspi',       name: 'Каспи',               icon: 'credit-card',  color: '#f59e0b' },
+  { id: 'otbasy',      name: 'Отбасы банк',         icon: 'landmark',     color: '#3b82f6' },
+  { id: 'installment', name: 'Рассрочка',            icon: 'file-text',    color: '#8b5cf6' },
+  { id: 'credit',      name: 'Кредит',               icon: 'alert-circle', color: '#ef4444' },
+  { id: 'workout',     name: 'Тренировка',           icon: 'activity',     color: '#10b981' },
+  { id: 'phone',       name: 'Тариф (телефон)',      icon: 'smartphone',   color: '#06b6d4' },
+  { id: 'transport',   name: 'Транспорт',            icon: 'car',          color: '#f97316' },
+  { id: 'food',        name: 'Еда',                  icon: 'shopping-bag', color: '#84cc16' },
+  { id: 'other_exp',   name: 'Прочее',               icon: 'box',          color: '#6b7280' },
 ]
 
 const INCOME_CATS = [
-  { id: 'salary',       name: 'Зарплата',          icon: '💰', color: '#10b981' },
-  { id: 'advance',      name: 'Аванс',             icon: '💵', color: '#34d399' },
-  { id: 'bonus',        name: 'Бонус / Допка',     icon: '🎁', color: '#a3e635' },
-  { id: 'compensation', name: 'Компенсация',       icon: '💸', color: '#4ade80' },
-  { id: 'other_inc',    name: 'Прочие доходы',     icon: '➕', color: '#6ee7b7' },
+  { id: 'salary',       name: 'Зарплата',          icon: 'briefcase',    color: '#10b981' },
+  { id: 'advance',      name: 'Аванс',             icon: 'wallet',       color: '#34d399' },
+  { id: 'bonus',        name: 'Бонус / Допка',     icon: 'gift',         color: '#a3e635' },
+  { id: 'compensation', name: 'Компенсация',       icon: 'shield',       color: '#4ade80' },
+  { id: 'other_inc',    name: 'Прочие доходы',     icon: 'plus-circle',  color: '#6ee7b7' },
 ]
+
+// ===== SVG ICONS =====
+const ICONS = {
+  'home':          '<path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1v-9.5z"/><path d="M9 21v-8h6v8"/>',
+  'credit-card':   '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/>',
+  'landmark':      '<line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polyline points="2 11 12 2 22 11"/>',
+  'file-text':     '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  'alert-circle':  '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  'activity':      '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  'smartphone':    '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  'car':           '<path d="M5 17H3a2 2 0 01-2-2V9a2 2 0 012-2h11l4 4 1 3v3a2 2 0 01-2 2h-1"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="17.5" cy="17" r="1.5"/>',
+  'shopping-bag':  '<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>',
+  'box':           '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 001 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  'briefcase':     '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>',
+  'wallet':        '<path d="M20 12V22H4a2 2 0 01-2-2V4a2 2 0 012-2h16v8"/><path d="M20 12a2 2 0 000 4h4V12z"/>',
+  'gift':          '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/>',
+  'shield':        '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  'plus-circle':   '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+  'star':          '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  'settings':      '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>',
+  'bar-chart':     '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+  'download':      '<polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/>',
+  'upload':        '<polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/>',
+  'cpu':           '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>',
+  'key':           '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
+  'alert-triangle':'<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  'check-circle':  '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  'trending-up':   '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  'trending-down': '<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>',
+  'receipt':       '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1V2l-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="12" y2="15"/>',
+  'info':          '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12.01" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/>',
+  'help-circle':   '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+}
+
+function getIcon(name, size = 18) {
+  const paths = ICONS[name] || ICONS['help-circle']
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0">${paths}</svg>`
+}
 
 const ALL_CATS = { expense: EXPENSE_CATS, income: INCOME_CATS }
 
@@ -121,7 +159,7 @@ function nextMonthKey(key) {
 
 function getCat(type, id) {
   return (type === 'expense' ? EXPENSE_CATS : INCOME_CATS).find(c => c.id === id) ||
-    { id, name: id, icon: '❓', color: '#999' }
+    { id, name: id, icon: 'help-circle', color: '#999' }
 }
 
 function uid() {
@@ -194,7 +232,7 @@ function renderHome() {
       <div class="cat-progress-item">
         <div class="cat-progress-header">
           <div class="cat-progress-name">
-            <div class="cat-icon-wrap" style="background:${cat.color}18">${cat.icon}</div>
+            <div class="cat-icon-wrap" style="background:${cat.color}18;color:${cat.color}">${getIcon(cat.icon, 16)}</div>
             <span>${cat.name}</span>
           </div>
           <div class="cat-progress-right">
@@ -229,7 +267,7 @@ function renderBudget() {
       return `
         <div class="budget-row">
           <div class="budget-cat-name">
-            <span>${cat.icon}</span><span>${cat.name}</span>
+            <span class="budget-cat-icon" style="color:${cat.color}">${getIcon(cat.icon, 16)}</span><span>${cat.name}</span>
           </div>
           <div class="budget-cell plan">
             <input class="plan-input" type="number" value="${plan || ''}" placeholder="0"
@@ -267,7 +305,7 @@ function renderBudget() {
       return `
         <div class="budget-row">
           <div class="budget-cat-name">
-            <span>${cat.icon}</span><span>${cat.name}</span>
+            <span class="budget-cat-icon" style="color:${cat.color}">${getIcon(cat.icon, 16)}</span><span>${cat.name}</span>
           </div>
           <div class="budget-cell plan">
             <input class="plan-input" type="number" value="${plan || ''}" placeholder="0"
@@ -328,7 +366,7 @@ function renderTransactions() {
   txs.sort((a, b) => b.date.localeCompare(a.date))
 
   if (!txs.length) {
-    setHTML('tx-list', `<div class="empty-state"><div class="empty-icon">💸</div><p>Транзакций нет.<br>Нажми + чтобы добавить</p></div>`)
+    setHTML('tx-list', `<div class="empty-state"><div class="empty-icon">${getIcon('receipt', 44)}</div><p>Транзакций нет.<br>Нажми + чтобы добавить</p></div>`)
     return
   }
 
@@ -345,7 +383,7 @@ function renderTransactions() {
       const cat = getCat(t.type, t.categoryId)
       return `
         <div class="tx-item" onclick="openEditTx('${t.id}')">
-          <div class="tx-icon" style="background:${cat.color}20">${cat.icon}</div>
+          <div class="tx-icon" style="background:${cat.color}20;color:${cat.color}">${getIcon(cat.icon, 20)}</div>
           <div class="tx-info">
             <div class="tx-name">${cat.name}</div>
             <div class="tx-meta">${t.description || '—'}</div>
@@ -372,7 +410,7 @@ function renderWishlist() {
   el('wish-count').textContent = count + ' желаний'
 
   if (!wishes.length) {
-    setHTML('wish-list', `<div class="empty-state"><div class="empty-icon">⭐</div><p>Хотелок нет.<br>Добавь что-нибудь!</p></div>`)
+    setHTML('wish-list', `<div class="empty-state"><div class="empty-icon">${getIcon('star', 44)}</div><p>Хотелок нет.<br>Добавь что-нибудь!</p></div>`)
     return
   }
 
@@ -437,9 +475,9 @@ function renderAnalytics() {
       topOverAmt = actual - plan
     }
   })
-  el('analytics-top-over').textContent = topOver
-    ? topOver.icon + ' ' + topOver.name + ' (+' + fmtShort(topOverAmt) + ')'
-    : '✅ Нет перерасхода'
+  el('analytics-top-over').innerHTML = topOver
+    ? `<span style="display:inline-flex;align-items:center;gap:6px;color:${topOver.color}">${getIcon(topOver.icon, 16)}</span> ${topOver.name} <span style="color:var(--danger)">(+${fmtShort(topOverAmt)})</span>`
+    : `<span style="display:inline-flex;align-items:center;gap:6px;color:var(--success)">${getIcon('check-circle', 16)} Нет перерасхода</span>`
 
   // Bar chart for expenses
   const expCats = EXPENSE_CATS.filter(c => (actuals.expense[c.id] || 0) > 0 || (m.expenses[c.id]?.plan || 0) > 0)
@@ -455,7 +493,7 @@ function renderAnalytics() {
       <div class="chart-bar-wrap">
         ${plan > 0 ? `<div class="chart-bar" style="height:${ph}px;background:${c.color}30;border:1.5px dashed ${c.color};position:absolute;bottom:20px;width:calc(100%/${expCats.slice(0,6).length} - 10px)"></div>` : ''}
         <div class="chart-bar" style="height:${h}px;background:${over ? '#ef4444' : c.color}"></div>
-        <div class="chart-bar-label">${c.icon}</div>
+        <div class="chart-bar-label" style="color:${c.color}">${getIcon(c.icon, 14)}</div>
       </div>`
   }).join('')
 
@@ -541,7 +579,7 @@ async function runAnalysis() {
     alert('Ошибка: ' + e.message)
   } finally {
     btn.disabled = false
-    btn.innerHTML = '🤖 Анализировать с Claude AI'
+    btn.innerHTML = `${getIcon('cpu', 18)} Анализировать с Claude AI`
   }
 }
 
@@ -689,7 +727,7 @@ function renderCategoryGrid() {
   const cats = state.txType === 'income' ? INCOME_CATS : EXPENSE_CATS
   const html = cats.map(c => `
     <button class="cat-btn ${c.id === state.txCategoryId ? 'selected' : ''}" onclick="selectCat('${c.id}')">
-      <span class="cat-icon">${c.icon}</span>
+      <span class="cat-icon" style="color:${c.color}">${getIcon(c.icon, 22)}</span>
       <span class="cat-label">${c.name}</span>
     </button>`).join('')
   setHTML('tx-cat-grid', html)
