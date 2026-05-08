@@ -107,7 +107,7 @@ function defaultMonth() {
   INCOME_CATS.forEach(c => income[c.id] = { plan: 0 })
   const expenses = {}
   EXPENSE_CATS.forEach(c => expenses[c.id] = { plan: 0 })
-  return { income, expenses, wishlist: [], analysis: null }
+  return { income, expenses, wishlist: [], analysis: null, notes: {} }
 }
 
 // ===== HELPERS =====
@@ -259,23 +259,41 @@ function renderBudget() {
   const sub = state.budgetSubtab
   const cur = db.settings.currency
 
+  const notes = m.notes || {}
+
+  function budgetRow(cat, plan, actual, diff, diffClass, type) {
+    const note = notes[cat.id] || ''
+    const hasNote = note.trim().length > 0
+    const noteId = `note-${cat.id}`
+    return `
+      <div class="budget-row-wrap">
+        <div class="budget-row" onclick="toggleCatNote('${cat.id}','${type}')">
+          <div class="budget-cat-name">
+            <span class="budget-cat-icon" style="color:${cat.color}">${getIcon(cat.icon, 16)}</span>
+            <span>${cat.name}</span>
+            ${hasNote ? `<span class="note-dot" title="Есть заметка"></span>` : ''}
+          </div>
+          <div class="budget-cell plan" onclick="event.stopPropagation()">
+            <input class="plan-input" type="number" value="${plan || ''}" placeholder="0"
+              data-type="${type}" data-cat="${cat.id}" onchange="updatePlan(this)" oninput="updatePlan(this)">
+          </div>
+          <div class="budget-cell actual">${actual ? fmtShort(actual) : '—'}</div>
+          <div class="budget-cell ${diffClass}">${diff ? (diffClass === 'diff-pos' ? '+' : '') + fmtShort(Math.abs(diff)) : '—'}</div>
+        </div>
+        <div class="cat-note-wrap" id="${noteId}" style="display:none">
+          <textarea class="cat-note-input" placeholder="Заметка к категории…" rows="3"
+            onblur="saveCatNote('${cat.id}', this.value)"
+          >${note}</textarea>
+        </div>
+      </div>`
+  }
+
   if (sub === 'income') {
     let rows = INCOME_CATS.map(cat => {
       const plan = m.income[cat.id]?.plan || 0
       const actual = actuals.income[cat.id] || 0
       const diff = actual - plan
-      return `
-        <div class="budget-row">
-          <div class="budget-cat-name">
-            <span class="budget-cat-icon" style="color:${cat.color}">${getIcon(cat.icon, 16)}</span><span>${cat.name}</span>
-          </div>
-          <div class="budget-cell plan">
-            <input class="plan-input" type="number" value="${plan || ''}" placeholder="0"
-              data-type="income" data-cat="${cat.id}" onchange="updatePlan(this)" oninput="updatePlan(this)">
-          </div>
-          <div class="budget-cell actual">${actual ? fmtShort(actual) : '—'}</div>
-          <div class="budget-cell ${diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : ''}">${diff ? (diff > 0 ? '+' : '') + fmtShort(diff) : '—'}</div>
-        </div>`
+      return budgetRow(cat, plan, actual, diff, diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '', 'income')
     }).join('')
 
     const planTotal = planTotalIncome(key)
@@ -302,18 +320,7 @@ function renderBudget() {
       const plan = m.expenses[cat.id]?.plan || 0
       const actual = actuals.expense[cat.id] || 0
       const diff = plan - actual
-      return `
-        <div class="budget-row">
-          <div class="budget-cat-name">
-            <span class="budget-cat-icon" style="color:${cat.color}">${getIcon(cat.icon, 16)}</span><span>${cat.name}</span>
-          </div>
-          <div class="budget-cell plan">
-            <input class="plan-input" type="number" value="${plan || ''}" placeholder="0"
-              data-type="expense" data-cat="${cat.id}" onchange="updatePlan(this)" oninput="updatePlan(this)">
-          </div>
-          <div class="budget-cell actual">${actual ? fmtShort(actual) : '—'}</div>
-          <div class="budget-cell ${diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : ''}">${diff ? (diff > 0 ? '+' : '') + fmtShort(diff) : '—'}</div>
-        </div>`
+      return budgetRow(cat, plan, actual, diff, diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '', 'expense')
     }).join('')
 
     const planTotal = planTotalExpense(key)
@@ -353,6 +360,37 @@ function updatePlan(input) {
   saveData()
   renderHome()
   renderAnalytics()
+}
+
+function toggleCatNote(catId) {
+  const wrap = document.getElementById(`note-${catId}`)
+  if (!wrap) return
+  const isOpen = wrap.style.display !== 'none'
+  // Close all other open notes first
+  document.querySelectorAll('.cat-note-wrap').forEach(w => w.style.display = 'none')
+  if (!isOpen) {
+    wrap.style.display = 'block'
+    wrap.querySelector('textarea')?.focus()
+  }
+}
+
+function saveCatNote(catId, value) {
+  const key = state.viewMonthKey
+  const m = getMonthData(key)
+  if (!m.notes) m.notes = {}
+  m.notes[catId] = value.trim()
+  saveData()
+  // Update dot indicator without full re-render
+  const row = document.getElementById(`note-${catId}`)?.closest('.budget-row-wrap')
+  if (row) {
+    const dot = row.querySelector('.note-dot')
+    const catName = row.querySelector('.budget-cat-name span:nth-child(2)')
+    if (value.trim()) {
+      if (!dot) catName?.insertAdjacentHTML('afterend', '<span class="note-dot"></span>')
+    } else {
+      dot?.remove()
+    }
+  }
 }
 
 // ===== RENDER TRANSACTIONS =====

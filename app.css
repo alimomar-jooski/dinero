@@ -395,11 +395,8 @@ body {
   align-items: center;
   padding: 11px 14px;
   gap: 4px;
-  border-bottom: 1px solid var(--border);
   transition: background .12s;
 }
-.budget-row:last-child { border-bottom: none; }
-.budget-row:active { background: var(--card-hover); }
 
 .budget-row-header {
   display: grid;
@@ -459,6 +456,48 @@ body {
   font-size: 12px;
   border-top: 1px solid var(--border-strong);
 }
+
+/* ===== CATEGORY NOTES ===== */
+.budget-row-wrap { border-bottom: 1px solid var(--border); }
+.budget-row-wrap .budget-row { border-bottom: none; cursor: pointer; }
+.budget-row-wrap .budget-row:active { background: var(--card-hover); }
+
+.note-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.cat-note-wrap {
+  padding: 0 14px 12px;
+  background: var(--surface);
+  animation: noteSlide .18s ease;
+}
+@keyframes noteSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cat-note-input {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  line-height: 1.5;
+  box-sizing: border-box;
+  transition: border-color .15s;
+}
+.cat-note-input:focus { border-color: var(--primary); }
+.cat-note-input::placeholder { color: var(--text-muted); }
 
 /* ===== TRANSACTIONS TAB ===== */
 .tx-padding { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
