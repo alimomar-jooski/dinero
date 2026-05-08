@@ -4,8 +4,8 @@
   "description": "Личный финансовый помощник: бюджет, транзакции, аналитика с Claude AI",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f1f5f9",
-  "theme_color": "#6366f1",
+  "background_color": "#0b0e17",
+  "theme_color": "#0b0e17",
   "orientation": "portrait",
   "icons": [
     { "src": "icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" },

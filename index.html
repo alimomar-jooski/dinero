@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="theme-color" content="#6366f1">
+  <meta name="theme-color" content="#0b0e17">
   <title>Dinero</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.svg">
@@ -32,25 +32,28 @@
   <div id="tab-home" class="tab-panel active">
     <div class="home-padding">
       <div class="balance-card">
-        <div class="balance-label">Остаток</div>
+        <div class="balance-eyebrow">Текущий остаток</div>
         <div class="balance-amount" id="balance-amount">0 ₸</div>
+        <div class="balance-divider"></div>
         <div class="balance-row">
-          <div class="balance-stat stat-income">
-            <div class="stat-icon">↑</div>
-            <span id="home-income">0 ₸</span>
+          <div class="balance-stat">
+            <div class="balance-stat-label">Доходы</div>
+            <div class="balance-stat-value inc" id="home-income">0 ₸</div>
           </div>
-          <div class="balance-stat stat-expense">
-            <div class="stat-icon">↓</div>
-            <span id="home-expense">0 ₸</span>
+          <div class="balance-stat">
+            <div class="balance-stat-label">Расходы</div>
+            <div class="balance-stat-value exp" id="home-expense">0 ₸</div>
           </div>
         </div>
       </div>
 
       <div>
-        <div class="section-label" style="margin-bottom:8px">Расходы по категориям</div>
+        <div class="section-header" style="margin-bottom:10px">
+          <div class="section-label">Расходы по категориям</div>
+        </div>
         <div class="card">
-          <div class="category-progress-list" id="home-cat-list">
-            <div class="cat-progress-item" style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px">
+          <div id="home-cat-list">
+            <div class="cat-progress-item" style="color:var(--text-muted);font-size:13px;text-align:center;padding:32px">
               Нет данных за этот месяц
             </div>
           </div>

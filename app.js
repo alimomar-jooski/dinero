@@ -180,8 +180,8 @@ function renderHome() {
   const cur = db.settings.currency
 
   el('balance-amount').textContent = fmt(balance)
-  el('home-income').textContent = '↑ ' + fmtShort(incTotal) + ' ' + cur
-  el('home-expense').textContent = '↓ ' + fmtShort(expTotal) + ' ' + cur
+  el('home-income').textContent = fmtShort(incTotal) + ' ' + cur
+  el('home-expense').textContent = fmtShort(expTotal) + ' ' + cur
 
   const m = getMonthData(key)
   const catItems = EXPENSE_CATS.map(cat => {
@@ -194,22 +194,23 @@ function renderHome() {
       <div class="cat-progress-item">
         <div class="cat-progress-header">
           <div class="cat-progress-name">
-            <span>${cat.icon}</span>
+            <div class="cat-icon-wrap" style="background:${cat.color}18">${cat.icon}</div>
             <span>${cat.name}</span>
           </div>
-          <div class="cat-progress-amounts">
-            <span class="actual">${fmtShort(actual)}</span>
-            ${plan ? ' / ' + fmtShort(plan) : ''} ${cur}
+          <div class="cat-progress-right">
+            <div class="cat-progress-amounts">
+              <span class="actual">${fmtShort(actual)}</span>${plan ? ' <span style="opacity:.45">/ ' + fmtShort(plan) + '</span>' : ''} ${cur}
+            </div>
             ${over ? '<span class="badge badge-over">+' + fmtShort(actual - plan) + '</span>' : ''}
           </div>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill ${over ? 'over' : ''}" style="width:${pct}%;background:${cat.color}"></div>
+          <div class="progress-fill" style="width:${pct}%;background:${over ? 'var(--danger)' : cat.color}"></div>
         </div>
       </div>`
   }).join('')
 
-  setHTML('home-cat-list', catItems || '<div class="cat-progress-item" style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px">Нет данных за этот месяц</div>')
+  setHTML('home-cat-list', catItems || '<div class="cat-progress-item" style="color:var(--text-muted);font-size:13px;text-align:center;padding:32px">Нет данных за этот месяц</div>')
 }
 
 // ===== RENDER BUDGET =====
