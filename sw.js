@@ -1,4 +1,4 @@
-const CACHE = 'dinero-v3'
+const CACHE = 'dinero-v4'
 const ASSETS = ['./', './index.html', './app.css', './app.js', './manifest.json', './icon-192.png', './icon-512.png']
 
 self.addEventListener('install', e => {
@@ -15,14 +15,14 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.url.includes('api.anthropic.com')) return
-  // Network-first for navigation requests so updates are always picked up
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match('./index.html'))
-    )
-    return
-  }
+  // Network-first: always try to get fresh files, fall back to cache when offline
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(res => {
+        const clone = res.clone()
+        caches.open(CACHE).then(c => c.put(e.request, clone))
+        return res
+      })
+      .catch(() => caches.match(e.request))
   )
 })

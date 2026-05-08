@@ -54,6 +54,12 @@ const ICONS = {
   'receipt':       '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1V2l-2 1-2-1-2 1-2-1-2 1-2-1z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="12" y2="15"/>',
   'info':          '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12.01" y2="8"/><line x1="12" y1="12" x2="12" y2="16"/>',
   'help-circle':   '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  'tag':           '<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  'flag':          '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+  'target':        '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  'trash':         '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/>',
+  'edit-2':        '<path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  'plus':          '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
 }
 
 function getIcon(name, size = 18) {
@@ -83,7 +89,11 @@ let state = {
 // ===== STORAGE =====
 function loadData() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData()
+    const d = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData()
+    if (!d.goals) d.goals = []
+    if (!d.settings.catNames) d.settings.catNames = {}
+    if (!d.settings.customCats) d.settings.customCats = { expense: [], income: [] }
+    return d
   } catch { return defaultData() }
 }
 
@@ -92,7 +102,10 @@ function saveData() {
 }
 
 function defaultData() {
-  return { months: {}, transactions: [], settings: { claudeApiKey: '', currency: '₸' } }
+  return {
+    months: {}, transactions: [], goals: [],
+    settings: { claudeApiKey: '', currency: '₸', catNames: {}, customCats: { expense: [], income: [] } }
+  }
 }
 
 let db = loadData()
@@ -104,16 +117,42 @@ function getMonthData(key) {
 
 function defaultMonth() {
   const income = {}
-  INCOME_CATS.forEach(c => income[c.id] = { plan: 0 })
+  getIncCats().forEach(c => income[c.id] = { plan: 0 })
   const expenses = {}
-  EXPENSE_CATS.forEach(c => expenses[c.id] = { plan: 0 })
+  getExpCats().forEach(c => expenses[c.id] = { plan: 0 })
   return { income, expenses, wishlist: [], analysis: null, notes: {} }
+}
+
+// ===== DYNAMIC CATEGORY HELPERS =====
+const CAT_COLORS = ['#6366f1','#f59e0b','#3b82f6','#8b5cf6','#ef4444','#10b981','#06b6d4','#f97316','#84cc16','#6b7280','#ec4899','#14b8a6']
+
+function getExpCats() {
+  const names = db?.settings?.catNames || {}
+  const custom = (db?.settings?.customCats?.expense || [])
+  return [
+    ...EXPENSE_CATS.map(c => ({ ...c, name: names[c.id] || c.name })),
+    ...custom.map(c => ({ ...c, icon: c.icon || 'tag' }))
+  ]
+}
+
+function getIncCats() {
+  const names = db?.settings?.catNames || {}
+  const custom = (db?.settings?.customCats?.income || [])
+  return [
+    ...INCOME_CATS.map(c => ({ ...c, name: names[c.id] || c.name })),
+    ...custom.map(c => ({ ...c, icon: c.icon || 'tag' }))
+  ]
 }
 
 // ===== HELPERS =====
 function fmt(n) {
   if (!n && n !== 0) return '—'
   return Math.round(n).toLocaleString('ru-RU') + ' ' + db.settings.currency
+}
+
+function fmtNum(n) {
+  if (!n && n !== 0) return ''
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
 function fmtShort(n) {
@@ -158,8 +197,8 @@ function nextMonthKey(key) {
 }
 
 function getCat(type, id) {
-  return (type === 'expense' ? EXPENSE_CATS : INCOME_CATS).find(c => c.id === id) ||
-    { id, name: id, icon: 'help-circle', color: '#999' }
+  const cats = type === 'expense' ? getExpCats() : getIncCats()
+  return cats.find(c => c.id === id) || { id, name: id, icon: 'help-circle', color: '#999' }
 }
 
 function uid() {
@@ -171,8 +210,8 @@ function getActuals(monthKey) {
   const txs = db.transactions.filter(t => t.monthKey === monthKey)
   const income = {}
   const expense = {}
-  INCOME_CATS.forEach(c => income[c.id] = 0)
-  EXPENSE_CATS.forEach(c => expense[c.id] = 0)
+  getIncCats().forEach(c => income[c.id] = 0)
+  getExpCats().forEach(c => expense[c.id] = 0)
   txs.forEach(t => {
     if (t.type === 'income') income[t.categoryId] = (income[t.categoryId] || 0) + t.amount
     else expense[t.categoryId] = (expense[t.categoryId] || 0) + t.amount
@@ -222,7 +261,7 @@ function renderHome() {
   el('home-expense').textContent = fmtShort(expTotal) + ' ' + cur
 
   const m = getMonthData(key)
-  const catItems = EXPENSE_CATS.map(cat => {
+  const catItems = getExpCats().map(cat => {
     const plan = m.expenses[cat.id]?.plan || 0
     const actual = actuals.expense[cat.id] || 0
     if (plan === 0 && actual === 0) return ''
@@ -265,17 +304,23 @@ function renderBudget() {
     const note = notes[cat.id] || ''
     const hasNote = note.trim().length > 0
     const noteId = `note-${cat.id}`
+    const isCustom = !!(db.settings.customCats?.[type] || []).find(c => c.id === cat.id)
     return `
       <div class="budget-row-wrap">
         <div class="budget-row" onclick="toggleCatNote('${cat.id}','${type}')">
           <div class="budget-cat-name">
             <span class="budget-cat-icon" style="color:${cat.color}">${getIcon(cat.icon, 16)}</span>
-            <span>${cat.name}</span>
+            <span class="cat-name-label" onclick="event.stopPropagation();openRenameCat('${cat.id}','${type}')">${cat.name}</span>
             ${hasNote ? `<span class="note-dot" title="Есть заметка"></span>` : ''}
+            ${isCustom ? `<button class="cat-delete-btn" onclick="event.stopPropagation();deleteCustomCat('${cat.id}','${type}')" title="Удалить">${getIcon('trash',12)}</button>` : ''}
           </div>
           <div class="budget-cell plan" onclick="event.stopPropagation()">
-            <input class="plan-input" type="number" value="${plan || ''}" placeholder="0"
-              data-type="${type}" data-cat="${cat.id}" onchange="updatePlan(this)" oninput="updatePlan(this)">
+            <input class="plan-input" type="text" inputmode="numeric"
+              value="${plan ? fmtNum(plan) : ''}" placeholder="0"
+              data-type="${type}" data-cat="${cat.id}"
+              onfocus="this.value=this.value.replace(/\\s/g,'')"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+              onblur="updatePlan(this)">
           </div>
           <div class="budget-cell actual">${actual ? fmtShort(actual) : '—'}</div>
           <div class="budget-cell ${diffClass}">${diff ? (diffClass === 'diff-pos' ? '+' : '') + fmtShort(Math.abs(diff)) : '—'}</div>
@@ -289,7 +334,7 @@ function renderBudget() {
   }
 
   if (sub === 'income') {
-    let rows = INCOME_CATS.map(cat => {
+    let rows = getIncCats().map(cat => {
       const plan = m.income[cat.id]?.plan || 0
       const actual = actuals.income[cat.id] || 0
       const diff = actual - plan
@@ -306,6 +351,9 @@ function renderBudget() {
         <div style="text-align:right">Факт</div><div style="text-align:right">Разница</div>
       </div>
       ${rows}
+      <div class="budget-add-cat-row">
+        <button class="add-cat-btn" onclick="openAddCat('income')">${getIcon('plus',14)} Добавить категорию</button>
+      </div>
       <div class="budget-totals-row">
         <div>Итого</div>
         <div style="text-align:right">${fmtShort(planTotal)} ${cur}</div>
@@ -316,7 +364,7 @@ function renderBudget() {
       </div>`)
 
   } else {
-    let rows = EXPENSE_CATS.map(cat => {
+    let rows = getExpCats().map(cat => {
       const plan = m.expenses[cat.id]?.plan || 0
       const actual = actuals.expense[cat.id] || 0
       const diff = plan - actual
@@ -333,6 +381,9 @@ function renderBudget() {
         <div style="text-align:right">Факт</div><div style="text-align:right">Остаток</div>
       </div>
       ${rows}
+      <div class="budget-add-cat-row">
+        <button class="add-cat-btn" onclick="openAddCat('expense')">${getIcon('plus',14)} Добавить категорию</button>
+      </div>
       <div class="budget-totals-row">
         <div>Итого</div>
         <div style="text-align:right">${fmtShort(planTotal)} ${cur}</div>
@@ -347,7 +398,7 @@ function renderBudget() {
 function updatePlan(input) {
   const key = state.viewMonthKey
   const m = getMonthData(key)
-  const val = parseFloat(input.value) || 0
+  const val = parseFloat(input.value.replace(/\s/g, '')) || 0
   const cat = input.dataset.cat
   const type = input.dataset.type
   if (type === 'income') {
@@ -357,9 +408,83 @@ function updatePlan(input) {
     if (!m.expenses[cat]) m.expenses[cat] = { plan: 0 }
     m.expenses[cat].plan = val
   }
+  // Format display after save
+  input.value = val ? fmtNum(val) : ''
   saveData()
   renderHome()
   renderAnalytics()
+}
+
+// ===== CATEGORY MANAGEMENT =====
+function openRenameCat(catId, type) {
+  const cats = type === 'expense' ? getExpCats() : getIncCats()
+  const cat = cats.find(c => c.id === catId)
+  if (!cat) return
+  el('rename-cat-id').value = catId
+  el('rename-cat-type').value = type
+  el('rename-cat-input').value = cat.name
+  el('rename-cat-modal-title').textContent = 'Переименовать'
+  openModal('rename-cat-modal')
+  setTimeout(() => el('rename-cat-input').focus(), 100)
+}
+
+function saveRenamedCat() {
+  const catId = el('rename-cat-id').value
+  const name = el('rename-cat-input').value.trim()
+  if (!name) return
+  const type = el('rename-cat-type').value
+  const isCustom = !!(db.settings.customCats?.[type] || []).find(c => c.id === catId)
+  if (isCustom) {
+    const arr = db.settings.customCats[type]
+    const idx = arr.findIndex(c => c.id === catId)
+    if (idx >= 0) arr[idx].name = name
+  } else {
+    if (!db.settings.catNames) db.settings.catNames = {}
+    db.settings.catNames[catId] = name
+  }
+  saveData()
+  closeModal('rename-cat-modal')
+  renderBudget()
+}
+
+function openAddCat(type) {
+  el('add-cat-type').value = type
+  el('add-cat-name-input').value = ''
+  // Set active color
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'))
+  document.querySelector('.color-swatch')?.classList.add('active')
+  openModal('add-cat-modal')
+  setTimeout(() => el('add-cat-name-input').focus(), 100)
+}
+
+function selectCatColor(el_) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'))
+  el_.classList.add('active')
+}
+
+function saveNewCat() {
+  const name = el('add-cat-name-input').value.trim()
+  if (!name) { alert('Введи название'); return }
+  const type = el('add-cat-type').value
+  const activeSwatch = document.querySelector('.color-swatch.active')
+  const color = activeSwatch?.dataset.color || CAT_COLORS[0]
+  const newCat = { id: 'custom_' + uid(), name, color, icon: 'tag' }
+  if (!db.settings.customCats) db.settings.customCats = { expense: [], income: [] }
+  db.settings.customCats[type].push(newCat)
+  // Initialize plan for this month
+  const m = getMonthData(state.viewMonthKey)
+  if (type === 'income') { if (!m.income[newCat.id]) m.income[newCat.id] = { plan: 0 } }
+  else { if (!m.expenses[newCat.id]) m.expenses[newCat.id] = { plan: 0 } }
+  saveData()
+  closeModal('add-cat-modal')
+  renderBudget()
+}
+
+function deleteCustomCat(catId, type) {
+  if (!confirm('Удалить категорию?')) return
+  db.settings.customCats[type] = (db.settings.customCats[type] || []).filter(c => c.id !== catId)
+  saveData()
+  renderBudget()
 }
 
 function toggleCatNote(catId) {
@@ -440,6 +565,7 @@ function renderWishlist() {
   const key = state.viewMonthKey
   const m = getMonthData(key)
   const wishes = m.wishlist || []
+  const cur = db.settings.currency
 
   const total = wishes.filter(w => !w.done).reduce((a, w) => a + (w.amount || 0), 0)
   const count = wishes.filter(w => !w.done).length
@@ -447,6 +573,57 @@ function renderWishlist() {
   el('wish-total').textContent = fmt(total)
   el('wish-count').textContent = count + ' желаний'
 
+  // Goals section
+  const goals = db.goals || []
+  const goalsHtml = goals.length ? `
+    <div class="goals-section">
+      <div class="goals-header">
+        <div class="section-label">Мои цели</div>
+        <button class="small-btn" onclick="openAddGoal()">${getIcon('plus',13)} Добавить цель</button>
+      </div>
+      ${goals.map(g => {
+        const saved = (g.contributions || []).reduce((a, c) => a + c.amount, 0)
+        const pct = g.target > 0 ? Math.min((saved / g.target) * 100, 100) : 0
+        const remaining = Math.max(g.target - saved, 0)
+        return `
+        <div class="goal-card card">
+          <div class="goal-card-header">
+            <div class="goal-card-title">
+              <span style="color:${g.color}">${getIcon('flag', 16)}</span>
+              <span>${g.name}</span>
+            </div>
+            <div class="goal-card-actions">
+              ${g.monthly ? `<span class="goal-monthly">+${fmtNum(g.monthly)} ${cur}/мес</span>` : ''}
+              <button class="icon-btn-sm" onclick="openEditGoal('${g.id}')">${getIcon('edit-2',13)}</button>
+            </div>
+          </div>
+          <div class="goal-progress-bar">
+            <div class="goal-progress-fill" style="width:${pct}%;background:${g.color}"></div>
+          </div>
+          <div class="goal-card-stats">
+            <span class="goal-saved" style="color:${g.color}">${fmtNum(saved)} ${cur}</span>
+            <span class="goal-sep">из</span>
+            <span class="goal-target">${fmtNum(g.target)} ${cur}</span>
+            <span class="goal-pct">${Math.round(pct)}%</span>
+          </div>
+          ${remaining > 0 ? `<div class="goal-remaining">Осталось: ${fmtNum(remaining)} ${cur}</div>` : `<div class="goal-remaining" style="color:var(--success)">Цель достигнута!</div>`}
+          <button class="goal-contribute-btn" onclick="openContribution('${g.id}')">${getIcon('plus',14)} Внести взнос</button>
+        </div>`
+      }).join('')}
+    </div>` : `
+    <div class="goals-section">
+      <div class="goals-header">
+        <div class="section-label">Мои цели</div>
+        <button class="small-btn" onclick="openAddGoal()">${getIcon('plus',13)} Добавить цель</button>
+      </div>
+      <div class="card" style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px">
+        ${getIcon('target',32)}<br><br>Нет активных целей.<br>Добавь свою первую цель!
+      </div>
+    </div>`
+
+  setHTML('wish-goals', goalsHtml)
+
+  // Wishlist section
   if (!wishes.length) {
     setHTML('wish-list', `<div class="empty-state"><div class="empty-icon">${getIcon('star', 44)}</div><p>Хотелок нет.<br>Добавь что-нибудь!</p></div>`)
     return
@@ -461,11 +638,91 @@ function renderWishlist() {
         <div class="wish-name ${w.done ? 'done' : ''}">${w.name}</div>
         ${w.note ? `<div class="wish-note">${w.note}</div>` : ''}
       </div>
-      ${w.amount ? `<div class="wish-amount">${fmtShort(w.amount)} ${db.settings.currency}</div>` : ''}
+      ${w.amount ? `<div class="wish-amount">${fmtShort(w.amount)} ${cur}</div>` : ''}
       <button class="wish-delete-btn" onclick="deleteWish(${i})">✕</button>
     </div>`).join('') + `</div>`
 
   setHTML('wish-list', html)
+}
+
+// ===== GOALS =====
+function openAddGoal() {
+  el('goal-modal-title').textContent = 'Новая цель'
+  el('goal-id-input').value = ''
+  el('goal-name-input').value = ''
+  el('goal-target-input').value = ''
+  el('goal-monthly-input').value = ''
+  document.querySelectorAll('.goal-color-swatch').forEach((s,i) => s.classList.toggle('active', i===0))
+  el('goal-delete-btn').style.display = 'none'
+  openModal('goal-modal')
+  setTimeout(() => el('goal-name-input').focus(), 100)
+}
+
+function openEditGoal(id) {
+  const g = (db.goals || []).find(g => g.id === id)
+  if (!g) return
+  el('goal-modal-title').textContent = 'Редактировать цель'
+  el('goal-id-input').value = id
+  el('goal-name-input').value = g.name
+  el('goal-target-input').value = g.target || ''
+  el('goal-monthly-input').value = g.monthly || ''
+  document.querySelectorAll('.goal-color-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color === g.color)
+  })
+  el('goal-delete-btn').style.display = 'block'
+  openModal('goal-modal')
+}
+
+function saveGoal() {
+  const name = el('goal-name-input').value.trim()
+  if (!name) { alert('Введи название'); return }
+  const target = parseFloat(el('goal-target-input').value) || 0
+  const monthly = parseFloat(el('goal-monthly-input').value) || 0
+  const activeSwatch = document.querySelector('.goal-color-swatch.active')
+  const color = activeSwatch?.dataset.color || '#7c6af5'
+  const id = el('goal-id-input').value
+
+  if (id) {
+    const idx = db.goals.findIndex(g => g.id === id)
+    if (idx >= 0) Object.assign(db.goals[idx], { name, target, monthly, color })
+  } else {
+    if (!db.goals) db.goals = []
+    db.goals.push({ id: uid(), name, target, monthly, color, contributions: [] })
+  }
+  saveData()
+  closeModal('goal-modal')
+  renderWishlist()
+}
+
+function deleteGoal() {
+  const id = el('goal-id-input').value
+  if (!id || !confirm('Удалить цель и все взносы?')) return
+  db.goals = (db.goals || []).filter(g => g.id !== id)
+  saveData()
+  closeModal('goal-modal')
+  renderWishlist()
+}
+
+function openContribution(goalId) {
+  el('contrib-goal-id').value = goalId
+  el('contrib-amount-input').value = ''
+  const g = (db.goals || []).find(g => g.id === goalId)
+  el('contrib-modal-title').textContent = g ? 'Взнос: ' + g.name : 'Внести взнос'
+  openModal('contrib-modal')
+  setTimeout(() => el('contrib-amount-input').focus(), 100)
+}
+
+function saveContribution() {
+  const goalId = el('contrib-goal-id').value
+  const amount = parseFloat(el('contrib-amount-input').value) || 0
+  if (!amount) { alert('Введи сумму'); return }
+  const g = (db.goals || []).find(g => g.id === goalId)
+  if (!g) return
+  if (!g.contributions) g.contributions = []
+  g.contributions.push({ amount, date: today() })
+  saveData()
+  closeModal('contrib-modal')
+  renderWishlist()
 }
 
 function toggleWish(i) {
@@ -505,7 +762,7 @@ function renderAnalytics() {
 
   // Top overspent category
   let topOver = null, topOverAmt = 0
-  EXPENSE_CATS.forEach(cat => {
+  getExpCats().forEach(cat => {
     const plan = m.expenses[cat.id]?.plan || 0
     const actual = actuals.expense[cat.id] || 0
     if (plan > 0 && actual > plan && actual - plan > topOverAmt) {
@@ -518,7 +775,7 @@ function renderAnalytics() {
     : `<span style="display:inline-flex;align-items:center;gap:6px;color:var(--success)">${getIcon('check-circle', 16)} Нет перерасхода</span>`
 
   // Bar chart for expenses
-  const expCats = EXPENSE_CATS.filter(c => (actuals.expense[c.id] || 0) > 0 || (m.expenses[c.id]?.plan || 0) > 0)
+  const expCats = getExpCats().filter(c => (actuals.expense[c.id] || 0) > 0 || (m.expenses[c.id]?.plan || 0) > 0)
   const maxVal = Math.max(...expCats.map(c => Math.max(actuals.expense[c.id] || 0, m.expenses[c.id]?.plan || 0)), 1)
 
   const chartHtml = expCats.slice(0, 6).map(c => {
@@ -627,7 +884,7 @@ function buildPrompt(key) {
   const cur = db.settings.currency
   const label = monthLabel(key)
 
-  const incLines = INCOME_CATS.map(c => {
+  const incLines = getIncCats().map(c => {
     const plan = m.income[c.id]?.plan || 0
     const actual = actuals.income[c.id] || 0
     if (!plan && !actual) return null
@@ -636,7 +893,7 @@ function buildPrompt(key) {
     return `  • ${c.name}: план ${plan.toLocaleString()} ${cur}, факт ${actual.toLocaleString()} ${cur}${pct ? ` (${diff >= 0 ? '+' : ''}${pct}%)` : ''}`
   }).filter(Boolean).join('\n')
 
-  const expLines = EXPENSE_CATS.map(c => {
+  const expLines = getExpCats().map(c => {
     const plan = m.expenses[c.id]?.plan || 0
     const actual = actuals.expense[c.id] || 0
     if (!plan && !actual) return null
@@ -729,7 +986,7 @@ function renderAll() {
 function openAddTx() {
   state.editingTx = null
   state.txType = 'expense'
-  state.txCategoryId = EXPENSE_CATS[0].id
+  state.txCategoryId = getExpCats()[0].id
   el('tx-modal-title').textContent = 'Добавить транзакцию'
   el('tx-amount-input').value = ''
   el('tx-date-input').value = today()
@@ -762,7 +1019,7 @@ function renderTxTypeToggle() {
 }
 
 function renderCategoryGrid() {
-  const cats = state.txType === 'income' ? INCOME_CATS : EXPENSE_CATS
+  const cats = state.txType === 'income' ? getIncCats() : getExpCats()
   const html = cats.map(c => `
     <button class="cat-btn ${c.id === state.txCategoryId ? 'selected' : ''}" onclick="selectCat('${c.id}')">
       <span class="cat-icon" style="color:${c.color}">${getIcon(c.icon, 22)}</span>
@@ -773,7 +1030,7 @@ function renderCategoryGrid() {
 
 function setTxType(type) {
   state.txType = type
-  state.txCategoryId = type === 'income' ? INCOME_CATS[0].id : EXPENSE_CATS[0].id
+  state.txCategoryId = type === 'income' ? getIncCats()[0].id : getExpCats()[0].id
   renderTxTypeToggle()
   renderCategoryGrid()
 }

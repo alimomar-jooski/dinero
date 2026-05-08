@@ -121,6 +121,8 @@
         <button class="small-btn" onclick="openAddWish()">＋ Добавить желание</button>
       </div>
 
+      <div id="wish-goals"></div>
+
       <div id="wish-list">
         <div class="empty-state">
           <div class="empty-icon">⭐</div>
@@ -354,6 +356,106 @@
         <button class="btn-primary" onclick="saveSettings()">Сохранить</button>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ===== GOAL MODAL ===== -->
+<div class="modal-overlay" id="goal-modal" onclick="handleOverlayClick(event,'goal-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="goal-modal-title">Новая цель</div>
+    <div class="modal-body">
+      <input type="hidden" id="goal-id-input">
+      <div class="form-group">
+        <label class="form-label">Название цели</label>
+        <input type="text" class="form-input" id="goal-name-input" placeholder="Например: Тайланд 2026">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Целевая сумма</label>
+        <input type="number" class="form-input" id="goal-target-input" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Взнос в месяц (необязательно)</label>
+        <input type="number" class="form-input" id="goal-monthly-input" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Цвет</label>
+        <div class="color-swatches">
+          <button class="goal-color-swatch active" data-color="#7c6af5" style="background:#7c6af5" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+          <button class="goal-color-swatch" data-color="#10b981" style="background:#10b981" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+          <button class="goal-color-swatch" data-color="#f59e0b" style="background:#f59e0b" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+          <button class="goal-color-swatch" data-color="#ef4444" style="background:#ef4444" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+          <button class="goal-color-swatch" data-color="#06b6d4" style="background:#06b6d4" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+          <button class="goal-color-swatch" data-color="#ec4899" style="background:#ec4899" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+          <button class="goal-color-swatch" data-color="#f97316" style="background:#f97316" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+          <button class="goal-color-swatch" data-color="#8b5cf6" style="background:#8b5cf6" onclick="this.closest('.color-swatches').querySelectorAll('.goal-color-swatch').forEach(s=>s.classList.remove('active'));this.classList.add('active')"></button>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveGoal()">Сохранить</button>
+      <button class="btn-danger" id="goal-delete-btn" onclick="deleteGoal()" style="display:none">Удалить цель</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CONTRIBUTION MODAL ===== -->
+<div class="modal-overlay" id="contrib-modal" onclick="handleOverlayClick(event,'contrib-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="contrib-modal-title">Внести взнос</div>
+    <div class="modal-body">
+      <input type="hidden" id="contrib-goal-id">
+      <div class="form-group">
+        <label class="form-label">Сумма взноса</label>
+        <input type="number" class="form-input amount-input" id="contrib-amount-input" placeholder="0" inputmode="numeric">
+      </div>
+      <button class="btn-primary" onclick="saveContribution()">Внести</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RENAME CATEGORY MODAL ===== -->
+<div class="modal-overlay" id="rename-cat-modal" onclick="handleOverlayClick(event,'rename-cat-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="rename-cat-modal-title">Переименовать</div>
+    <div class="modal-body">
+      <input type="hidden" id="rename-cat-id">
+      <input type="hidden" id="rename-cat-type">
+      <div class="form-group">
+        <label class="form-label">Название категории</label>
+        <input type="text" class="form-input" id="rename-cat-input" placeholder="Введи название">
+      </div>
+      <button class="btn-primary" onclick="saveRenamedCat()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD CATEGORY MODAL ===== -->
+<div class="modal-overlay" id="add-cat-modal" onclick="handleOverlayClick(event,'add-cat-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Новая категория</div>
+    <div class="modal-body">
+      <input type="hidden" id="add-cat-type">
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input type="text" class="form-input" id="add-cat-name-input" placeholder="Например: БЦК кредит">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Цвет</label>
+        <div class="color-swatches">
+          <button class="color-swatch active" data-color="#6366f1" style="background:#6366f1" onclick="selectCatColor(this)"></button>
+          <button class="color-swatch" data-color="#f59e0b" style="background:#f59e0b" onclick="selectCatColor(this)"></button>
+          <button class="color-swatch" data-color="#ef4444" style="background:#ef4444" onclick="selectCatColor(this)"></button>
+          <button class="color-swatch" data-color="#10b981" style="background:#10b981" onclick="selectCatColor(this)"></button>
+          <button class="color-swatch" data-color="#06b6d4" style="background:#06b6d4" onclick="selectCatColor(this)"></button>
+          <button class="color-swatch" data-color="#8b5cf6" style="background:#8b5cf6" onclick="selectCatColor(this)"></button>
+          <button class="color-swatch" data-color="#f97316" style="background:#f97316" onclick="selectCatColor(this)"></button>
+          <button class="color-swatch" data-color="#ec4899" style="background:#ec4899" onclick="selectCatColor(this)"></button>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveNewCat()">Добавить</button>
     </div>
   </div>
 </div>
