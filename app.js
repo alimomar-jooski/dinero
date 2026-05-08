@@ -84,6 +84,8 @@ let state = {
   txType: 'expense',
   txCategoryId: '',
   editingTx: null,
+  openSubcats: new Set(),
+  expandedGoals: new Set(),
 }
 
 // ===== STORAGE =====
@@ -93,6 +95,12 @@ function loadData() {
     if (!d.goals) d.goals = []
     if (!d.settings.catNames) d.settings.catNames = {}
     if (!d.settings.customCats) d.settings.customCats = { expense: [], income: [] }
+    // Migrate goals: add monthlyPlans, add ids to existing contributions
+    d.goals.forEach(g => {
+      if (!g.monthlyPlans) g.monthlyPlans = []
+      if (!g.contributions) g.contributions = []
+      g.contributions.forEach(c => { if (!c.id) c.id = uid() })
+    })
     return d
   } catch { return defaultData() }
 }
@@ -349,7 +357,7 @@ function renderBudget() {
           <div class="budget-cell actual">${actual ? fmtShort(actual) : '—'}</div>
           <div class="budget-cell ${diffClass}">${diff ? (diffClass === 'diff-pos' ? '+' : '') + fmtShort(Math.abs(diff)) : '—'}</div>
         </div>
-        <div class="subcats-wrap" id="subcats-${cat.id}" style="display:none">
+        <div class="subcats-wrap" id="subcats-${cat.id}" style="display:${state.openSubcats.has(cat.id) ? 'block' : 'none'}">
           ${subsHtml}
           <button class="subcat-add-btn" onclick="addSubcat('${cat.id}','${type}')">${getIcon('plus',13)} Добавить подпункт</button>
         </div>
@@ -386,10 +394,8 @@ function renderBudget() {
 
   } else {
     let rows = getExpCats().map(cat => {
-      const plan = m.expenses[cat.id]?.plan || 0
       const actual = actuals.expense[cat.id] || 0
-      const diff = plan - actual
-      return budgetRow(cat, plan, actual, diff, diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '', 'expense')
+      return budgetRow(cat, actual, 'expense')
     }).join('')
 
     const planTotal = planTotalExpense(key)
@@ -539,6 +545,60 @@ function saveCatNote(catId, value) {
   }
 }
 
+// ===== BUDGET SUBCATEGORIES =====
+function toggleSubcats(catId) {
+  const wrap = el('subcats-' + catId)
+  if (!wrap) return
+  if (state.openSubcats.has(catId)) {
+    state.openSubcats.delete(catId)
+    wrap.style.display = 'none'
+  } else {
+    state.openSubcats.add(catId)
+    wrap.style.display = 'block'
+  }
+}
+
+function addSubcat(catId, type) {
+  const key = state.viewMonthKey
+  const m = getMonthData(key)
+  if (!m.subcats) m.subcats = {}
+  if (!m.subcats[catId]) m.subcats[catId] = []
+  m.subcats[catId].push({ name: '', amount: 0 })
+  state.openSubcats.add(catId)
+  saveData()
+  renderBudget()
+}
+
+function updateSubcatName(catId, type, i, value) {
+  const m = getMonthData(state.viewMonthKey)
+  if (m.subcats?.[catId]?.[i] !== undefined) {
+    m.subcats[catId][i].name = value
+    saveData()
+  }
+}
+
+function updateSubcatAmount(catId, type, i, value) {
+  const m = getMonthData(state.viewMonthKey)
+  if (m.subcats?.[catId]?.[i] !== undefined) {
+    m.subcats[catId][i].amount = parseFloat(value.replace(/\s/g, '')) || 0
+    saveData()
+    renderBudget()
+    renderHome()
+  }
+}
+
+function deleteSubcat(catId, type, i) {
+  const m = getMonthData(state.viewMonthKey)
+  if (m.subcats?.[catId]) {
+    m.subcats[catId].splice(i, 1)
+    if (m.subcats[catId].length > 0) state.openSubcats.add(catId)
+    else state.openSubcats.delete(catId)
+    saveData()
+    renderBudget()
+    renderHome()
+  }
+}
+
 // ===== RENDER TRANSACTIONS =====
 function renderTransactions() {
   const key = state.viewMonthKey
@@ -606,6 +666,40 @@ function renderWishlist() {
         const saved = (g.contributions || []).reduce((a, c) => a + c.amount, 0)
         const pct = g.target > 0 ? Math.min((saved / g.target) * 100, 100) : 0
         const remaining = Math.max(g.target - saved, 0)
+        const isExpanded = state.expandedGoals.has(g.id)
+        const plans = g.monthlyPlans || []
+
+        // Month options for adding a new plan (next 24 months, excluding already added)
+        const now = new Date()
+        let monthOpts = ''
+        for (let i = 0; i < 24; i++) {
+          const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+          const mKey = monthKey(d.getFullYear(), d.getMonth() + 1)
+          if (!plans.some(p => p.month === mKey)) {
+            monthOpts += `<option value="${mKey}">${monthLabel(mKey)}</option>`
+          }
+        }
+
+        const plansHtml = plans.map(p => `
+          <div class="goal-plan-item ${p.done ? 'done' : ''}">
+            <button class="goal-plan-check ${p.done ? 'done' : ''}" onclick="toggleMonthlyPlan('${g.id}','${p.id}')">
+              ${p.done ? getIcon('check-circle', 15) : '<span class="goal-plan-circle"></span>'}
+            </button>
+            <div class="goal-plan-info">
+              <span class="goal-plan-month">${monthLabel(p.month)}</span>
+              <span class="goal-plan-amount" style="color:${g.color}">${fmtNum(p.amount)} ${cur}</span>
+            </div>
+            <button class="goal-plan-del" onclick="deleteMonthlyPlan('${g.id}','${p.id}')">${getIcon('trash', 12)}</button>
+          </div>`).join('')
+
+        const addPlanRow = monthOpts ? `
+          <div class="goal-plan-add-row">
+            <select class="goal-plan-month-sel" id="plan-month-${g.id}">${monthOpts}</select>
+            <input class="goal-plan-amount-input" id="plan-amount-${g.id}" type="text" inputmode="numeric"
+              placeholder="Сумма" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <button class="goal-plan-add-btn" onclick="addMonthlyPlanInline('${g.id}')">${getIcon('plus', 14)}</button>
+          </div>` : ''
+
         return `
         <div class="goal-card card">
           <div class="goal-card-header">
@@ -614,7 +708,10 @@ function renderWishlist() {
               <span>${g.name}</span>
             </div>
             <div class="goal-card-actions">
-              ${g.monthly ? `<span class="goal-monthly">+${fmtNum(g.monthly)} ${cur}/мес</span>` : ''}
+              <button class="icon-btn-sm" onclick="toggleGoalPlans('${g.id}')" title="Ежемесячные планы">
+                ${getIcon('flag', 13)}
+                ${plans.length ? `<span class="goal-plans-badge">${plans.length}</span>` : ''}
+              </button>
               <button class="icon-btn-sm" onclick="openEditGoal('${g.id}')">${getIcon('edit-2',13)}</button>
             </div>
           </div>
@@ -628,6 +725,12 @@ function renderWishlist() {
             <span class="goal-pct">${Math.round(pct)}%</span>
           </div>
           ${remaining > 0 ? `<div class="goal-remaining">Осталось: ${fmtNum(remaining)} ${cur}</div>` : `<div class="goal-remaining" style="color:var(--success)">Цель достигнута!</div>`}
+          ${isExpanded ? `
+          <div class="goal-plans-section">
+            <div class="goal-plans-title">Ежемесячные взносы</div>
+            ${plansHtml || '<div class="goal-plans-empty">Добавь первый план</div>'}
+            ${addPlanRow}
+          </div>` : ''}
           <button class="goal-contribute-btn" onclick="openContribution('${g.id}')">${getIcon('plus',14)} Внести взнос</button>
         </div>`
       }).join('')}
@@ -743,6 +846,67 @@ function saveContribution() {
   g.contributions.push({ amount, date: today() })
   saveData()
   closeModal('contrib-modal')
+  renderWishlist()
+}
+
+function toggleGoalPlans(goalId) {
+  if (state.expandedGoals.has(goalId)) {
+    state.expandedGoals.delete(goalId)
+  } else {
+    state.expandedGoals.add(goalId)
+  }
+  renderWishlist()
+}
+
+function toggleMonthlyPlan(goalId, planId) {
+  const g = (db.goals || []).find(g => g.id === goalId)
+  if (!g) return
+  const plan = (g.monthlyPlans || []).find(p => p.id === planId)
+  if (!plan) return
+
+  if (plan.done) {
+    // Снять галочку — удалить взнос
+    if (plan.contributionId) {
+      g.contributions = (g.contributions || []).filter(c => c.id !== plan.contributionId)
+      plan.contributionId = null
+    }
+    plan.done = false
+  } else {
+    // Поставить галочку — добавить взнос
+    const contribId = uid()
+    if (!g.contributions) g.contributions = []
+    g.contributions.push({ id: contribId, amount: plan.amount, date: today() })
+    plan.contributionId = contribId
+    plan.done = true
+  }
+  saveData()
+  renderWishlist()
+}
+
+function addMonthlyPlanInline(goalId) {
+  const monthVal = el('plan-month-' + goalId)?.value
+  const amountStr = el('plan-amount-' + goalId)?.value || ''
+  const amount = parseFloat(amountStr.replace(/\s/g, '')) || 0
+  if (!monthVal || !amount) { alert('Укажи месяц и сумму'); return }
+  const g = (db.goals || []).find(g => g.id === goalId)
+  if (!g) return
+  if (!g.monthlyPlans) g.monthlyPlans = []
+  g.monthlyPlans.push({ id: uid(), month: monthVal, amount, done: false, contributionId: null })
+  // Sort by month
+  g.monthlyPlans.sort((a, b) => a.month.localeCompare(b.month))
+  saveData()
+  renderWishlist()
+}
+
+function deleteMonthlyPlan(goalId, planId) {
+  const g = (db.goals || []).find(g => g.id === goalId)
+  if (!g) return
+  const plan = (g.monthlyPlans || []).find(p => p.id === planId)
+  if (plan?.contributionId) {
+    g.contributions = (g.contributions || []).filter(c => c.id !== plan.contributionId)
+  }
+  g.monthlyPlans = (g.monthlyPlans || []).filter(p => p.id !== planId)
+  saveData()
   renderWishlist()
 }
 
