@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#6366f1">
+  <title>Dinero</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.svg">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="app-header">
+  <div class="header-month">
+    <button class="month-nav-btn" onclick="navMonth(-1)">‹</button>
+    <h1 id="current-month-label">Май 2025</h1>
+    <button class="month-nav-btn" onclick="navMonth(1)">›</button>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="openSettings()" title="Настройки">⚙️</button>
+  </div>
+</header>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="main-content">
+
+  <!-- HOME TAB -->
+  <div id="tab-home" class="tab-panel active">
+    <div class="home-padding">
+      <div class="balance-card">
+        <div class="balance-label">Остаток</div>
+        <div class="balance-amount" id="balance-amount">0 ₸</div>
+        <div class="balance-row">
+          <div class="balance-stat stat-income">
+            <div class="stat-icon">↑</div>
+            <span id="home-income">0 ₸</span>
+          </div>
+          <div class="balance-stat stat-expense">
+            <div class="stat-icon">↓</div>
+            <span id="home-expense">0 ₸</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label" style="margin-bottom:8px">Расходы по категориям</div>
+        <div class="card">
+          <div class="category-progress-list" id="home-cat-list">
+            <div class="cat-progress-item" style="color:var(--text-muted);font-size:13px;text-align:center;padding:24px">
+              Нет данных за этот месяц
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUDGET TAB -->
+  <div id="tab-budget" class="tab-panel">
+    <div class="budget-padding">
+      <div class="subtabs">
+        <button class="subtab-btn active" id="subtab-income" onclick="switchSubtab('income')">💰 Доходы</button>
+        <button class="subtab-btn" id="subtab-expense" onclick="switchSubtab('expense')">💸 Расходы</button>
+      </div>
+      <div class="card">
+        <div id="budget-content">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--text-muted);text-align:center;padding:4px 0">
+        Нажми на поле Плана чтобы изменить. Факт обновляется автоматически из транзакций.
+      </p>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS TAB -->
+  <div id="tab-transactions" class="tab-panel">
+    <div class="tx-padding">
+      <div class="tx-filter-row">
+        <button class="filter-chip active" id="filter-all" onclick="setTxFilter('all')">Все</button>
+        <button class="filter-chip" id="filter-income" onclick="setTxFilter('income')">Доходы</button>
+        <button class="filter-chip" id="filter-expense" onclick="setTxFilter('expense')">Расходы</button>
+      </div>
+      <div id="tx-list">
+        <div class="empty-state">
+          <div class="empty-icon">💸</div>
+          <p>Транзакций нет.<br>Нажми + чтобы добавить</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WISHLIST TAB -->
+  <div id="tab-wishlist" class="tab-panel">
+    <div class="wish-padding">
+      <div class="wish-summary">
+        <div>
+          <div class="wish-summary-label">Сумма хотелок</div>
+          <div class="wish-summary-amount" id="wish-total">0 ₸</div>
+          <div class="wish-summary-count" id="wish-count">0 желаний</div>
+        </div>
+        <div style="font-size:40px">⭐</div>
+      </div>
+
+      <div class="add-btn-row">
+        <button class="small-btn" onclick="openAddWish()">＋ Добавить желание</button>
+      </div>
+
+      <div id="wish-list">
+        <div class="empty-state">
+          <div class="empty-icon">⭐</div>
+          <p>Хотелок нет.<br>Добавь что-нибудь!</p>
+        </div>
+      </div>
+
+      <div class="card" style="padding:14px 16px;font-size:13px;color:var(--text-muted);line-height:1.6;border-left:3px solid var(--warning)">
+        💡 <strong>Хотелки</strong> — это твои желания на месяц. Не обязательно покупать, но лучше потратить на это, чем на бессмысленные траты.
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS TAB -->
+  <div id="tab-analytics" class="tab-panel">
+    <div class="analytics-padding">
+
+      <div class="analytics-month-select">
+        <label>Месяц:</label>
+        <select class="select-input" id="analytics-month-sel" onchange="onAnalyticsMonthChange(this.value)">
+        </select>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Норма сбережений</div>
+          <div class="metric-value positive" id="analytics-savings">0%</div>
+          <div class="metric-sub">от общего дохода</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Остаток</div>
+          <div class="metric-value" id="analytics-balance">0 ₸</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Доходы</div>
+          <div class="metric-value neutral" id="analytics-income">0 ₸</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Расходы</div>
+          <div class="metric-value" id="analytics-expense">0 ₸</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">⚠️ Перерасход</div>
+        </div>
+        <div style="padding:12px 16px;font-size:14px;font-weight:500" id="analytics-top-over">✅ Нет перерасхода</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📊 Расходы по категориям</div>
+        </div>
+        <div style="padding:16px" id="analytics-chart"></div>
+        <div style="padding:0 16px 12px;font-size:11px;color:var(--text-muted)">
+          Столбец — факт · Пунктир — план
+        </div>
+      </div>
+
+      <div id="api-key-section" class="api-key-card">
+        <div class="api-key-label">🔑 API ключ Claude AI</div>
+        <div class="api-key-desc">Для анализа нужен ключ от Anthropic. Получи на console.anthropic.com → API Keys. Ключ хранится только в браузере.</div>
+        <input type="password" class="api-key-input" id="inline-api-key" placeholder="sk-ant-...">
+      </div>
+
+      <button class="ai-btn" id="ai-analyze-btn" onclick="runAnalysis()">
+        🤖 Анализировать с Claude AI
+      </button>
+
+      <div id="ai-result-block" style="display:none">
+        <div class="ai-result">
+          <div class="ai-result-header">
+            🤖 Анализ Claude AI
+            <button onclick="clearAnalysis()" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px">Обновить</button>
+          </div>
+          <div class="ai-result-text" id="ai-result-text"></div>
+          <div class="ai-result-date" id="ai-result-date"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== BOTTOM NAV ===== -->
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="switchTab('home')">
+    <span class="nav-icon">🏠</span>Главная
+  </button>
+  <button class="nav-item" id="nav-budget" onclick="switchTab('budget')">
+    <span class="nav-icon">📋</span>Бюджет
+  </button>
+  <button class="nav-item" id="nav-transactions" onclick="switchTab('transactions')">
+    <span class="nav-icon">💳</span>Транзакции
+  </button>
+  <button class="nav-item" id="nav-wishlist" onclick="switchTab('wishlist')">
+    <span class="nav-icon">⭐</span>Хотелки
+  </button>
+  <button class="nav-item" id="nav-analytics" onclick="switchTab('analytics')">
+    <span class="nav-icon">📊</span>Аналитика
+  </button>
+</nav>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="fabAction()">＋</button>
+
+<!-- ===== TRANSACTION MODAL ===== -->
+<div class="modal-overlay" id="tx-modal" onclick="handleOverlayClick(event,'tx-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="tx-modal-title">Добавить транзакцию</div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <div class="type-toggle">
+          <button class="type-btn" id="type-expense-btn" onclick="setTxType('expense')">💸 Расход</button>
+          <button class="type-btn active income" id="type-income-btn" onclick="setTxType('income')">💰 Доход</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Сумма</label>
+        <input type="number" class="form-input amount-input" id="tx-amount-input"
+          placeholder="0" inputmode="numeric" min="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Категория</label>
+        <div class="category-grid" id="tx-cat-grid"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Дата</label>
+        <input type="date" class="form-input" id="tx-date-input">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Описание (необязательно)</label>
+        <input type="text" class="form-input" id="tx-desc-input" placeholder="Например: зарплата за май">
+      </div>
+
+      <button class="btn-primary" onclick="saveTx()">Сохранить</button>
+      <button class="btn-danger" id="tx-delete-btn" onclick="deleteTx()" style="display:none">Удалить транзакцию</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== WISHLIST MODAL ===== -->
+<div class="modal-overlay" id="wish-modal" onclick="handleOverlayClick(event,'wish-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Добавить желание</div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input type="text" class="form-input" id="wish-name-input" placeholder="Например: AirPods Pro">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Сумма (примерно)</label>
+        <input type="number" class="form-input" id="wish-amount-input" placeholder="0" inputmode="numeric">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Заметка (необязательно)</label>
+        <input type="text" class="form-input" id="wish-note-input" placeholder="Зачем нужно?">
+      </div>
+
+      <button class="btn-primary" onclick="saveWish()">Добавить в список</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== SETTINGS MODAL ===== -->
+<div class="modal-overlay" id="settings-modal" onclick="handleOverlayClick(event,'settings-modal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ Настройки</div>
+    <div style="padding-bottom:16px">
+
+      <div class="settings-item">
+        <div class="settings-label">API ключ Claude AI</div>
+        <div class="settings-desc">Нужен для аналитики. Получи на console.anthropic.com → API Keys</div>
+        <input type="password" class="form-input" id="settings-api-key" placeholder="sk-ant-..." style="margin-top:8px">
+      </div>
+
+      <div class="settings-item">
+        <div class="settings-label">Валюта</div>
+        <input type="text" class="form-input" id="settings-currency" placeholder="₸" maxlength="3" style="margin-top:8px;max-width:80px">
+      </div>
+
+      <div class="settings-item">
+        <div class="settings-label">Резервная копия</div>
+        <div class="settings-desc">Экспортируй данные в JSON файл</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="small-btn" onclick="exportData()">⬇ Экспорт</button>
+          <label class="small-btn" style="cursor:pointer">
+            ⬆ Импорт
+            <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+          </label>
+        </div>
+      </div>
+
+      <div style="padding:16px">
+        <button class="btn-primary" onclick="saveSettings()">Сохранить</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  // Extra event handlers that need DOM
+
+  function switchSubtab(sub) {
+    state.budgetSubtab = sub
+    document.getElementById('subtab-income').classList.toggle('active', sub === 'income')
+    document.getElementById('subtab-expense').classList.toggle('active', sub === 'expense')
+    renderBudget()
+  }
+
+  function setTxFilter(f) {
+    state.txFilter = f
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'))
+    document.getElementById('filter-' + f).classList.add('active')
+    renderTransactions()
+  }
+
+  function handleOverlayClick(e, modalId) {
+    if (e.target === e.currentTarget) closeModal(modalId)
+  }
+
+  function onAnalyticsMonthChange(val) {
+    state.analyticsMonthKey = val
+    renderAnalytics()
+  }
+
+  function clearAnalysis() {
+    const key = state.analyticsMonthKey || state.viewMonthKey
+    const m = getMonthData(key)
+    m.analysis = null
+    saveData()
+    renderAnalytics()
+  }
+</script>
+</body>
+</html>
