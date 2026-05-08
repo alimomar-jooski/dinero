@@ -120,7 +120,7 @@ function defaultMonth() {
   getIncCats().forEach(c => income[c.id] = { plan: 0 })
   const expenses = {}
   getExpCats().forEach(c => expenses[c.id] = { plan: 0 })
-  return { income, expenses, wishlist: [], analysis: null, notes: {} }
+  return { income, expenses, wishlist: [], analysis: null, subcats: {} }
 }
 
 // ===== DYNAMIC CATEGORY HELPERS =====
@@ -229,14 +229,21 @@ function totalExpense(key) {
   return Object.values(expense).reduce((a, b) => a + b, 0)
 }
 
+function getEffectivePlan(m, type, catId) {
+  const subs = (m.subcats || {})[catId] || []
+  if (subs.length > 0) return subs.reduce((a, s) => a + (s.amount || 0), 0)
+  const data = type === 'income' ? m.income[catId] : m.expenses[catId]
+  return data?.plan || 0
+}
+
 function planTotalIncome(key) {
   const m = getMonthData(key)
-  return Object.values(m.income).reduce((a, c) => a + (c.plan || 0), 0)
+  return getIncCats().reduce((a, c) => a + getEffectivePlan(m, 'income', c.id), 0)
 }
 
 function planTotalExpense(key) {
   const m = getMonthData(key)
-  return Object.values(m.expenses).reduce((a, c) => a + (c.plan || 0), 0)
+  return getExpCats().reduce((a, c) => a + getEffectivePlan(m, 'expense', c.id), 0)
 }
 
 // ===== RENDER HELPERS =====
@@ -298,47 +305,61 @@ function renderBudget() {
   const sub = state.budgetSubtab
   const cur = db.settings.currency
 
-  const notes = m.notes || {}
-
-  function budgetRow(cat, plan, actual, diff, diffClass, type) {
-    const note = notes[cat.id] || ''
-    const hasNote = note.trim().length > 0
-    const noteId = `note-${cat.id}`
+  function budgetRow(cat, baseActual, type) {
+    const subs = (m.subcats || {})[cat.id] || []
+    const effectivePlan = getEffectivePlan(m, type, cat.id)
+    const actual = baseActual
+    const diff = type === 'income' ? actual - effectivePlan : effectivePlan - actual
+    const diffClass = diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : ''
+    const hasSubs = subs.length > 0
     const isCustom = !!(db.settings.customCats?.[type] || []).find(c => c.id === cat.id)
+
+    const subsHtml = subs.map((s, i) => `
+      <div class="subcat-row">
+        <div class="subcat-dot" style="background:${cat.color}"></div>
+        <input class="subcat-name-input" type="text" value="${s.name}" placeholder="Название..."
+          onblur="updateSubcatName('${cat.id}','${type}',${i},this.value)">
+        <input class="subcat-amount-input" type="text" inputmode="numeric"
+          value="${s.amount ? fmtNum(s.amount) : ''}" placeholder="0"
+          onfocus="this.value=this.value.replace(/\\s/g,'')"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+          onblur="updateSubcatAmount('${cat.id}','${type}',${i},this.value)">
+        <button class="subcat-del-btn" onclick="deleteSubcat('${cat.id}','${type}',${i})">${getIcon('trash',12)}</button>
+      </div>`).join('')
+
     return `
       <div class="budget-row-wrap">
-        <div class="budget-row" onclick="toggleCatNote('${cat.id}','${type}')">
+        <div class="budget-row" onclick="toggleSubcats('${cat.id}')">
           <div class="budget-cat-name">
             <span class="budget-cat-icon" style="color:${cat.color}">${getIcon(cat.icon, 16)}</span>
             <span class="cat-name-label" onclick="event.stopPropagation();openRenameCat('${cat.id}','${type}')">${cat.name}</span>
-            ${hasNote ? `<span class="note-dot" title="Есть заметка"></span>` : ''}
-            ${isCustom ? `<button class="cat-delete-btn" onclick="event.stopPropagation();deleteCustomCat('${cat.id}','${type}')" title="Удалить">${getIcon('trash',12)}</button>` : ''}
+            ${hasSubs ? `<span class="subcat-badge">${subs.length}</span>` : ''}
+            ${isCustom ? `<button class="cat-delete-btn" onclick="event.stopPropagation();deleteCustomCat('${cat.id}','${type}')">${getIcon('trash',12)}</button>` : ''}
           </div>
           <div class="budget-cell plan" onclick="event.stopPropagation()">
-            <input class="plan-input" type="text" inputmode="numeric"
-              value="${plan ? fmtNum(plan) : ''}" placeholder="0"
-              data-type="${type}" data-cat="${cat.id}"
-              onfocus="this.value=this.value.replace(/\\s/g,'')"
-              oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-              onblur="updatePlan(this)">
+            ${hasSubs
+              ? `<span class="plan-locked">${fmtNum(effectivePlan)}</span>`
+              : `<input class="plan-input" type="text" inputmode="numeric"
+                  value="${effectivePlan ? fmtNum(effectivePlan) : ''}" placeholder="0"
+                  data-type="${type}" data-cat="${cat.id}"
+                  onfocus="this.value=this.value.replace(/\\s/g,'')"
+                  oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                  onblur="updatePlan(this)">`}
           </div>
           <div class="budget-cell actual">${actual ? fmtShort(actual) : '—'}</div>
           <div class="budget-cell ${diffClass}">${diff ? (diffClass === 'diff-pos' ? '+' : '') + fmtShort(Math.abs(diff)) : '—'}</div>
         </div>
-        <div class="cat-note-wrap" id="${noteId}" style="display:none">
-          <textarea class="cat-note-input" placeholder="Заметка к категории…" rows="3"
-            onblur="saveCatNote('${cat.id}', this.value)"
-          >${note}</textarea>
+        <div class="subcats-wrap" id="subcats-${cat.id}" style="display:none">
+          ${subsHtml}
+          <button class="subcat-add-btn" onclick="addSubcat('${cat.id}','${type}')">${getIcon('plus',13)} Добавить подпункт</button>
         </div>
       </div>`
   }
 
   if (sub === 'income') {
     let rows = getIncCats().map(cat => {
-      const plan = m.income[cat.id]?.plan || 0
       const actual = actuals.income[cat.id] || 0
-      const diff = actual - plan
-      return budgetRow(cat, plan, actual, diff, diff > 0 ? 'diff-pos' : diff < 0 ? 'diff-neg' : '', 'income')
+      return budgetRow(cat, actual, 'income')
     }).join('')
 
     const planTotal = planTotalIncome(key)

@@ -1,4 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="40" fill="#6366f1"/>
-  <text x="96" y="135" font-size="96" text-anchor="middle" fill="white" font-family="system-ui">₸</text>
+  <!-- Background -->
+  <rect width="192" height="192" rx="42" fill="#1a1a1c"/>
+  <rect width="192" height="192" rx="42" fill="url(#bg-grad)" opacity="0.4"/>
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a2e"/>
+      <stop offset="100%" style="stop-color:#0f0f10"/>
+    </linearGradient>
+    <clipPath id="d-clip">
+      <path d="M44 36 L44 156 C44 156 138 156 150 96 C162 36 44 36 44 36 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- D letterform - vertical bar -->
+  <rect x="44" y="36" width="20" height="120" rx="10" fill="white"/>
+
+  <!-- D letterform - arc -->
+  <path d="M 54 36 C 54 36 158 36 158 96 C 158 156 54 156 54 156"
+        stroke="white" stroke-width="20" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Horizontal bars inside D (layered on top) -->
+  <!-- Bar 1 - white -->
+  <rect x="58" y="62" width="56" height="14" rx="7" fill="white"/>
+  <!-- Bar 2 - white, slightly transparent -->
+  <rect x="58" y="82" width="56" height="14" rx="7" fill="white" opacity="0.75"/>
+  <!-- Bar 3 - green -->
+  <rect x="58" y="102" width="56" height="14" rx="7" fill="url(#green-grad)"/>
+  <!-- Bar 4 - green darker, shorter -->
+  <rect x="58" y="122" width="42" height="12" rx="6" fill="url(#green-grad2)"/>
+
+  <defs>
+    <linearGradient id="green-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4caf72"/>
+      <stop offset="100%" style="stop-color:#2d7d46"/>
+    </linearGradient>
+    <linearGradient id="green-grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3a9458"/>
+      <stop offset="100%" style="stop-color:#1f5c33"/>
+    </linearGradient>
+  </defs>
 </svg>
