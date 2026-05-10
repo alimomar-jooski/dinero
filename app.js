@@ -125,9 +125,10 @@ function saveData() {
   clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
     if (!currentUser) return
-    await _supabase.from('user_data').upsert({
+    const { error } = await _supabase.from('user_data').upsert({
       id: currentUser.id, data: db, updated_at: new Date().toISOString()
     })
+    if (error) console.error('Save error:', error.message)
   }, 800)
 }
 
@@ -1318,6 +1319,12 @@ async function signIn() {
 }
 
 async function signOut() {
+  clearTimeout(saveTimer)
+  if (currentUser) {
+    await _supabase.from('user_data').upsert({
+      id: currentUser.id, data: db, updated_at: new Date().toISOString()
+    })
+  }
   await _supabase.auth.signOut()
 }
 
