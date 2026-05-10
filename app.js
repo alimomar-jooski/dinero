@@ -95,15 +95,18 @@ let state = {
 // ===== STORAGE =====
 async function loadUserData() {
   try {
-    const { data } = await _supabase
+    const { data, error } = await _supabase
       .from('user_data')
       .select('data')
       .eq('id', currentUser.id)
       .maybeSingle()
 
+    if (error) console.error('Load error:', error.message, error.code)
+
     if (!data) {
       const defaults = defaultData()
-      await _supabase.from('user_data').insert({ id: currentUser.id, data: defaults })
+      const { error: ie } = await _supabase.from('user_data').upsert({ id: currentUser.id, data: defaults })
+      if (ie) console.error('Init insert error:', ie.message, ie.code)
       return defaults
     }
 
@@ -128,8 +131,29 @@ function saveData() {
     const { error } = await _supabase.from('user_data').upsert({
       id: currentUser.id, data: db, updated_at: new Date().toISOString()
     })
-    if (error) console.error('Save error:', error.message)
+    if (error) {
+      console.error('Save error:', error.message, error.code)
+      showToast('Ошибка сохранения: ' + error.message, true)
+    } else {
+      showToast('Сохранено ✓')
+    }
   }, 800)
+}
+
+function showToast(msg, isError = false) {
+  let t = document.getElementById('save-toast')
+  if (!t) {
+    t = document.createElement('div')
+    t.id = 'save-toast'
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;z-index:9999;transition:opacity .3s'
+    document.body.appendChild(t)
+  }
+  t.textContent = msg
+  t.style.background = isError ? '#ef4444' : '#10b981'
+  t.style.color = '#fff'
+  t.style.opacity = '1'
+  clearTimeout(t._timer)
+  t._timer = setTimeout(() => t.style.opacity = '0', isError ? 4000 : 1500)
 }
 
 function defaultData() {
