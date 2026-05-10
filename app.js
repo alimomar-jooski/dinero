@@ -324,7 +324,7 @@ function renderHome() {
 
   const m = getMonthData(key)
   const catItems = getExpCats().map(cat => {
-    const plan = m.expenses[cat.id]?.plan || 0
+    const plan = getEffectivePlan(m, 'expense', cat.id)
     const actual = actuals.expense[cat.id] || 0
     if (plan === 0 && actual === 0) return ''
     const pct = plan > 0 ? Math.min((actual / plan) * 100, 100) : 0
