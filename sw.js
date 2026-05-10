@@ -14,7 +14,10 @@ self.addEventListener('activate', e => {
 })
 
 self.addEventListener('fetch', e => {
+  // Skip non-GET requests and external APIs
+  if (e.request.method !== 'GET') return
   if (e.request.url.includes('api.anthropic.com')) return
+  if (e.request.url.includes('supabase.co')) return
   // Network-first: always try to get fresh files, fall back to cache when offline
   e.respondWith(
     fetch(e.request)
